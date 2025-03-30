@@ -16,7 +16,13 @@ void _writeSubCmdAdr(int data, bool send = false) {
     }
 }
 
-
+void _dirCmdR(byte cmd, byte len) {
+    _Wire.beginTransmission(_adr);
+    _Wire.write(cmd);
+    _Wire.endTransmission(false);
+    _Wire.requestFrom(_adr, len);
+    _Wire.readBytes(_buf, len);
+}
 
 bool _subCmdR(int cmd) { //See page 13 TRM
     _writeSubCmdAdr(cmd, true); //1. Write lower byte of subcommand to 0x3E, 2. Write upper byte of subcommand to 0x3F.
@@ -41,7 +47,7 @@ bool _subCmdR(int cmd) { //See page 13 TRM
     //6. Read the checksum at 0x60 and verify it matches the data read
     byte checksum = (byte) data + (byte) (cmd >> 8); 
     for(int i = 0; i < _bufLen; i++) {
-        checksum += buf[i];
+        checksum += _buf[i];
     }
     checksum = ~checksum;
     _writeByte(0x60);
@@ -50,7 +56,7 @@ bool _subCmdR(int cmd) { //See page 13 TRM
     return _Wire.read() == checksum;
 }
 
-bool _subCmdW(int cmd, byte* data, byte len) {
+void _subCmdW(int cmd, byte* data, byte len) {
     byte checksum = (byte) data + (byte) (cmd >> 8);
     for(int i = 0; i < len; i++) {
         checksum += *(data + i);
@@ -66,4 +72,50 @@ bool _subCmdW(int cmd, byte* data, byte len) {
     _Wire.write(checksum);
     _Wire.write(len + 4);
     _Wire.endTransmission();
+}
+
+void ddsgConfig(byte config) {
+    _subCmdW(0x9302, (byte*) &config, 1);
+}
+
+void dfetoffConfig(byte config) {
+    _subCmdW(0x92FB, (byte*) &config, 1);
+}
+
+int cellVoltage(byte cell) {
+    _dirCmdR(0x14 + 2 * (cell - 1), 2);
+    return *((int*) &_buf);
+}
+
+int stackVoltage() {
+    _dirCmdR(0x34, 2);
+    return *((int*) &_buf);
+}
+
+int current() {
+    _dirCmdR(0x3A, 2);
+    return *((int*) &_buf);
+}
+
+float temp() {
+    _dirCmdR(0x68, 2);
+    return (*((int*) &_buf) * 10.0) - 273.15;
+}
+
+void fullAccess() {
+    _Wire.beginTransmission(_adr);
+    _Wire.write(0x3E);
+    _Wire.write(0xFF);
+    _Wire.write(0xFF);
+    _Wire.endTransmission(false);
+    _Wire.beginTransmission(_adr);
+    _Wire.write(0x3E);
+    _Wire.write(0xFF);
+    _Wire.write(0xFF);
+    _Wire.endTransmission();
+}
+
+bool _OTPCheck() {
+    _subCmdR(0x00A0);
+    return buf[0] & (1 << 7);
 }
