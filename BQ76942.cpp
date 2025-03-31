@@ -74,36 +74,50 @@ void _subCmdW(int cmd, byte* data, byte len) {
     _Wire.endTransmission();
 }
 
-void ddsgConfig(byte config) {
-    _subCmdW(0x9302, (byte*) &config, 1);
+bool _writeMem(int cmd, byte* data, byte len) {
+    _subCmdW(cmd, data, len);
+    if(!_subCmdR(cmd)) {
+        return false;
+    }
+    for(byte i = 0; i < len; i++) {
+        if(*(data + i) != *(_buf + i)) {
+            return false;
+        }
+    }
+    return true;
 }
 
-void dfetoffConfig(byte config) {
-    _subCmdW(0x92FB, (byte*) &config, 1);
+
+bool ddsgConfig(byte config) {
+    _writeMem(0x9302, (byte*) &config, 1);
+}
+
+bool dfetoffConfig(byte config) {
+    _writeMem(0x92FB, (byte*) &config, 1);
 }
 
 void daConfig(byte config = 0x0A) { //0x0A: userV = mV, userA = cA, use die temp for cell temp protections
-    _subCmdW(0x9303, (byte*) &config, 1);
+    _writeMem(0x9303, (byte*) &config, 1);
 }
 
 int cellVoltage(byte cell) {
     _dirCmdR(0x14 + 2 * (cell - 1), 2);
-    return *((int*) &_buf);
+    return (buf[1] >> 8) + buf[0];
 }
 
 int stackVoltage() {
     _dirCmdR(0x34, 2);
-    return *((int*) &_buf);
+    return (buf[1] >> 8) + buf[0];
 }
 
 int current() {
     _dirCmdR(0x3A, 2);
-    return *((int*) &_buf);
+    return (buf[1] >> 8) + buf[0];
 }
 
 float temp() {
     _dirCmdR(0x68, 2);
-    return (*((int*) &_buf) * 10) - 273.15;
+    return (((buf[1] >> 8) + buf[0]) * 10) - 273.15;
 }
 
 void fullAccess() {
@@ -122,4 +136,24 @@ void fullAccess() {
 bool _OTPCheck() {
     _subCmdR(0x00A0);
     return buf[0] & (1 << 7);
+}
+
+unsigned int devNum() {
+    _subCmdR(0x0002);
+    return *((unsigned int*) &buf);
+}
+
+unsigned int fwVersion() {
+    _subCmdR(0x0002);
+    return *(((unsigned int*) &buf) + 1);
+}
+
+bool cellConfig(byte numCells) {
+    unsigned int config;
+    if(numCells == 4) {
+        config = 0x0702;
+    } else if(numCells == 6) {
+        config = 0x1F02;
+    }
+    _writeMem(0x9304, (byte*) &config, 2);
 }
