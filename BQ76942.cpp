@@ -82,6 +82,10 @@ void dfetoffConfig(byte config) {
     _subCmdW(0x92FB, (byte*) &config, 1);
 }
 
+void daConfig(byte config = 0x0A) { //0x0A: userV = mV, userA = cA, use die temp for cell temp protections
+    _subCmdW(0x9303, (byte*) &config, 1);
+}
+
 int cellVoltage(byte cell) {
     _dirCmdR(0x14 + 2 * (cell - 1), 2);
     return *((int*) &_buf);
@@ -99,7 +103,7 @@ int current() {
 
 float temp() {
     _dirCmdR(0x68, 2);
-    return (*((int*) &_buf) * 10.0) - 273.15;
+    return (*((int*) &_buf) * 10) - 273.15;
 }
 
 void fullAccess() {
