@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "BQ76942.h"
 
-BQ76942::BQ76942(TwoWire* wire = &Wire, byte adr) {
+BQ76942::BQ76942(TwoWire* wire, byte adr) {
     _Wire = wire;
     _adr = adr;
 }
@@ -10,13 +10,13 @@ void BQ76942::begin() {
     _Wire->begin();
 }
 
-void BQ76942::_writeByte(byte data, bool release = false) {
+void BQ76942::_writeByte(byte data, bool release) {
     _Wire->beginTransmission(_adr);
     _Wire->write(data);
     _Wire->endTransmission(release);
 }
 
-void BQ76942::_writeSubCmdAdr(int data, bool send = false) {
+void BQ76942::_writeSubCmdAdr(int data, bool send) {
     _Wire->beginTransmission(_adr);
     _Wire->write(0x3E);
     _Wire->write((byte) data);
@@ -40,22 +40,22 @@ bool BQ76942::_subCmdR(int cmd) { //See page 13 TRM
     bool complete = false;
     while(!complete) { //Continue reading 0x3E and 0x3F until it returns what was written originally
         _writeByte(0x3E);
-        _Wire->requestFrom(_adr, 2, false) //3. Read 0x3E and 0x3F
-        if(Wire.read() == ((byte) data) && Wire.read() == ((byte) (cmd >> 8))) { //If this returns 0xFF, this indicates the subcommand has not completed operation yet
+        _Wire->requestFrom(_adr, 2, false); //3. Read 0x3E and 0x3F
+        if(Wire.read() == ((byte) cmd) && Wire.read() == ((byte) (cmd >> 8))) { //If this returns 0xFF, this indicates the subcommand has not completed operation yet
             complete = true;
         }
     }
 
     _writeByte(0x61); //4. Read the length of response from 0x61.
     _Wire->requestFrom(_adr, 1, false);
-    _bufLen = _Wire->read() - 4 //0x61 provides the length of the buffer data plus 4
+    _bufLen = _Wire->read() - 4; //0x61 provides the length of the buffer data plus 4
 
     _writeByte(0x40); //5. Read buffer starting at 0x40
     _Wire->requestFrom(_adr, 1, false);
     _Wire->readBytes(_buf, _bufLen); 
     
     //6. Read the checksum at 0x60 and verify it matches the data read
-    byte checksum = (byte) data + (byte) (cmd >> 8); 
+    byte checksum = (byte) cmd + (byte) (cmd >> 8); 
     for(int i = 0; i < _bufLen; i++) {
         checksum += _buf[i];
     }
@@ -67,7 +67,7 @@ bool BQ76942::_subCmdR(int cmd) { //See page 13 TRM
 }
 
 void BQ76942::_subCmdW(int cmd, byte* data, byte len) {
-    byte checksum = (byte) data + (byte) (cmd >> 8);
+    byte checksum = (byte) cmd + (byte) (cmd >> 8);
     for(int i = 0; i < len; i++) {
         checksum += *(data + i);
     }
@@ -75,7 +75,7 @@ void BQ76942::_subCmdW(int cmd, byte* data, byte len) {
 
     _writeSubCmdAdr(cmd);
     _Wire->write(data, len);
-    _Wire->endTransmisison(false); //Write data
+    _Wire->endTransmission(false); //Write data
     
     _Wire->beginTransmission(_adr);
     _Wire->write(0x60);
@@ -106,28 +106,28 @@ bool BQ76942::dfetoffConfig(byte config) {
     _writeMem(0x92FB, (byte*) &config, 1);
 }
 
-void BQ76942::daConfig(byte config = 0x0A) { //0x0A: userV = mV, userA = cA, use die temp for cell temp protections
+void BQ76942::daConfig(byte config) { //0x0A (default): userV = mV, userA = cA, use die temp for cell temp protections
     _writeMem(0x9303, (byte*) &config, 1);
 }
 
 int BQ76942::cellVoltage(byte cell) {
     _dirCmdR(0x14 + 2 * (cell - 1), 2);
-    return (buf[1] >> 8) + buf[0];
+    return (_buf[1] >> 8) + _buf[0];
 }
 
 int BQ76942::stackVoltage() {
     _dirCmdR(0x34, 2);
-    return (buf[1] >> 8) + buf[0];
+    return (_buf[1] >> 8) + _buf[0];
 }
 
 int BQ76942::current() {
     _dirCmdR(0x3A, 2);
-    return (buf[1] >> 8) + buf[0];
+    return (_buf[1] >> 8) + _buf[0];
 }
 
 float BQ76942::temp() {
     _dirCmdR(0x68, 2);
-    return (((buf[1] >> 8) + buf[0]) * 10) - 273.15;
+    return (((_buf[1] >> 8) + _buf[0]) * 10) - 273.15;
 }
 
 void BQ76942::fullAccess() {
@@ -143,19 +143,19 @@ void BQ76942::fullAccess() {
     _Wire->endTransmission();
 }
 
-bool BQ76942::_OTPCheck() {
+bool BQ76942::_OTPcheck() {
     _subCmdR(0x00A0);
-    return buf[0] & (1 << 7);
+    return _buf[0] & (1 << 7);
 }
 
 unsigned int BQ76942::devNum() {
     _subCmdR(0x0002);
-    return *((unsigned int*) &buf);
+    return *((unsigned int*) &_buf);
 }
 
 unsigned int BQ76942::fwVersion() {
     _subCmdR(0x0002);
-    return *(((unsigned int*) &buf) + 1);
+    return *(((unsigned int*) &_buf) + 1);
 }
 
 bool BQ76942::cellConfig(byte numCells) {
