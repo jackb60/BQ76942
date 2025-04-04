@@ -1,11 +1,12 @@
 #include "Arduino.h"
+#include "Wire.h"
 
 #define DEFAULT_ADDR 0x10
 
 class BQ76942 {
     public:
-        BQ76942(TwoWire* = &Wire, byte adr = DEFAULT_ADDR);
-        bool begin();
+        BQ76942(TwoWire* wire = &Wire, byte adr = DEFAULT_ADDR);
+        void begin();
         bool ddsgConfig(byte config);
         int cellVoltage(byte cell);
         int stackVoltage();
