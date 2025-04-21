@@ -23,12 +23,12 @@ class BQ76942 {
         byte _buf[256];
         byte _bufLen;
         void _dirCmdR(byte cmd, byte len);
-        bool _subCmdR(int cmd);
-        void _subCmdW(int cmd, byte* data, byte len);
+        bool _subCmdR(unsigned int cmd);
+        void _subCmdW(unsigned int cmd, byte* data, byte len);
         void _writeByte(byte data, bool release = false);
-        void _writeSubCmdAdr(int data, bool send = false);
+        void _writeSubCmdAdr(unsigned int data, bool send = false);
         bool _OTPcheck();
-        bool _writeMem(int cmd, byte* data, byte len);
+        bool _writeMem(unsigned int cmd, byte* data, byte len);
         bool cellConfig(byte numCells);
 
 };

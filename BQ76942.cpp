@@ -16,7 +16,7 @@ void BQ76942::_writeByte(byte data, bool release) {
     _Wire->endTransmission(release);
 }
 
-void BQ76942::_writeSubCmdAdr(int data, bool send) {
+void BQ76942::_writeSubCmdAdr(unsigned int data, bool send) {
     _Wire->beginTransmission(_adr);
     _Wire->write(0x3E);
     _Wire->write((byte) data);
@@ -34,7 +34,7 @@ void BQ76942::_dirCmdR(byte cmd, byte len) {
     _Wire->readBytes(_buf, len);
 }
 
-bool BQ76942::_subCmdR(int cmd) { //See page 13 TRM
+bool BQ76942::_subCmdR(unsigned int cmd) { //See page 13 TRM
     _writeSubCmdAdr(cmd, true); //1. Write lower byte of subcommand to 0x3E, 2. Write upper byte of subcommand to 0x3F.
     
     bool complete = false;
@@ -66,7 +66,7 @@ bool BQ76942::_subCmdR(int cmd) { //See page 13 TRM
     return _Wire->read() == checksum;
 }
 
-void BQ76942::_subCmdW(int cmd, byte* data, byte len) {
+void BQ76942::_subCmdW(unsinged int cmd, byte* data, byte len) {
     byte checksum = (byte) cmd + (byte) (cmd >> 8);
     for(int i = 0; i < len; i++) {
         checksum += *(data + i);
@@ -84,7 +84,7 @@ void BQ76942::_subCmdW(int cmd, byte* data, byte len) {
     _Wire->endTransmission();
 }
 
-bool BQ76942::_writeMem(int cmd, byte* data, byte len) {
+bool BQ76942::_writeMem(unsigned int cmd, byte* data, byte len) {
     _subCmdW(cmd, data, len);
     if(!_subCmdR(cmd)) {
         return false;
@@ -112,22 +112,22 @@ void BQ76942::daConfig(byte config) { //0x0A (default): userV = mV, userA = cA, 
 
 int BQ76942::cellVoltage(byte cell) {
     _dirCmdR(0x14 + 2 * (cell - 1), 2);
-    return (_buf[1] >> 8) + _buf[0];
+    return (_buf[1] << 8) + _buf[0];
 }
 
 int BQ76942::stackVoltage() {
     _dirCmdR(0x34, 2);
-    return (_buf[1] >> 8) + _buf[0];
+    return (_buf[1] << 8) + _buf[0];
 }
 
 int BQ76942::current() {
     _dirCmdR(0x3A, 2);
-    return (_buf[1] >> 8) + _buf[0];
+    return (_buf[1] << 8) + _buf[0];
 }
 
 float BQ76942::temp() {
     _dirCmdR(0x68, 2);
-    return (((_buf[1] >> 8) + _buf[0]) * 10) - 273.15;
+    return (((_buf[1] << 8) + _buf[0]) / 10.0) - 273.15;
 }
 
 void BQ76942::fullAccess() {
