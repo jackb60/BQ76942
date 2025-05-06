@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "Wire.h"
 
-#define DEFAULT_ADDR 0x10
+#define DEFAULT_ADDR 0x08
 
 class BQ76942 {
     public:
@@ -17,6 +17,7 @@ class BQ76942 {
         bool dfetoffConfig(byte config);
         bool ddsgConfig(byte config);
         void daConfig(byte config = 0x0A);
+        bool cellConfig(byte numCells);
     private:
         TwoWire* _Wire;
         byte _adr;
@@ -25,10 +26,10 @@ class BQ76942 {
         void _dirCmdR(byte cmd, byte len);
         bool _subCmdR(unsigned int cmd);
         void _subCmdW(unsigned int cmd, byte* data, byte len);
-        void _writeByte(byte data, bool release = false);
+        void _writeByte(byte data);
         void _writeSubCmdAdr(unsigned int data, bool send = false);
         bool _OTPcheck();
         bool _writeMem(unsigned int cmd, byte* data, byte len);
-        bool cellConfig(byte numCells);
+        
 
 };

@@ -10,10 +10,10 @@ void BQ76942::begin() {
     _Wire->begin();
 }
 
-void BQ76942::_writeByte(byte data, bool release) {
+void BQ76942::_writeByte(byte data) {
     _Wire->beginTransmission(_adr);
     _Wire->write(data);
-    _Wire->endTransmission(release);
+    _Wire->endTransmission();
 }
 
 void BQ76942::_writeSubCmdAdr(unsigned int data, bool send) {
@@ -22,7 +22,7 @@ void BQ76942::_writeSubCmdAdr(unsigned int data, bool send) {
     _Wire->write((byte) data);
     _Wire->write((byte) (data >> 8));
     if(send) {
-        _Wire->endTransmission(false);
+        _Wire->endTransmission();
     }
 }
 
@@ -40,66 +40,107 @@ bool BQ76942::_subCmdR(unsigned int cmd) { //See page 13 TRM
     bool complete = false;
     while(!complete) { //Continue reading 0x3E and 0x3F until it returns what was written originally
         _writeByte(0x3E);
-        _Wire->requestFrom(_adr, 2, false); //3. Read 0x3E and 0x3F
-        if(Wire.read() == ((byte) cmd) && Wire.read() == ((byte) (cmd >> 8))) { //If this returns 0xFF, this indicates the subcommand has not completed operation yet
+        _Wire->requestFrom(_adr, 2); //3. Read 0x3E and 0x3F
+        if((_Wire->read() == ((byte) cmd)) && (_Wire->read() == ((byte) (cmd >> 8)))) { //If this returns 0xFF, this indicates the subcommand has not completed operation yet
             complete = true;
         }
     }
 
     _writeByte(0x61); //4. Read the length of response from 0x61.
-    _Wire->requestFrom(_adr, 1, false);
+    _Wire->requestFrom(_adr, 1);
     _bufLen = _Wire->read() - 4; //0x61 provides the length of the buffer data plus 4
-
+    Serial.print("BUFLEN");
+    Serial.println(_bufLen);
     _writeByte(0x40); //5. Read buffer starting at 0x40
-    _Wire->requestFrom(_adr, 1, false);
-    _Wire->readBytes(_buf, _bufLen); 
-    
+    _Wire->requestFrom(_adr, _bufLen);
+    Serial.print("AVIAL: ");
+    //Serial.println(_Wire->read());
+    Serial.println(_Wire->available());
+    //_Wire->readBytes(_buf, _bufLen); 
+    //Serial.println("HERE");
     //6. Read the checksum at 0x60 and verify it matches the data read
-    byte checksum = (byte) cmd + (byte) (cmd >> 8); 
+    /*byte checksum = (byte) cmd + (byte) (cmd >> 8); 
     for(int i = 0; i < _bufLen; i++) {
         checksum += _buf[i];
     }
     checksum = ~checksum;
     _writeByte(0x60);
     _Wire->requestFrom(_adr, 1);
-    
-    return _Wire->read() == checksum;
+    */
+   for(byte i = 0; i < 10; i++) {
+    Serial.print("BYTE ");
+    Serial.print(i);
+    Serial.print(": 0x");
+    Serial.println(_Wire->read(), HEX);
+   }
+
+   //_subCmdR(0x2808);
+   delay(9999999999);
+    return true;//_Wire->read() == checksum;
 }
 
-void BQ76942::_subCmdW(unsinged int cmd, byte* data, byte len) {
+void BQ76942::_subCmdW(unsigned int cmd, byte* data, byte len) {
+    Serial.print("FET STATUS: 0x");
+    _dirCmdR(0x7F, 1);
+    Serial.println(_buf[0], HEX);
     byte checksum = (byte) cmd + (byte) (cmd >> 8);
+    Serial.print("CHK1: 0x");
+    Serial.println(checksum, HEX);
     for(int i = 0; i < len; i++) {
         checksum += *(data + i);
     }
     checksum = ~checksum;
-
+    Serial.print("CHK2: 0x");
+    Serial.println(checksum, HEX);
+    Serial.print("DATA: 0x");
+    Serial.println(*data, HEX);
     _writeSubCmdAdr(cmd);
-    _Wire->write(data, len);
-    _Wire->endTransmission(false); //Write data
+    //_Wire->write(*data, len);
+    _Wire->write(*data);
+    for(int i = 0; i < 31; i++) {
+        _Wire->write(0x00);
+    }
+    _Wire->write(checksum);
+    _Wire->write(len + 4);
+    /*_Wire->endTransmission(true);//false); //Write data
     
     _Wire->beginTransmission(_adr);
     _Wire->write(0x60);
     _Wire->write(checksum);
-    _Wire->write(len + 4);
+    _Wire->write(len + 4);*/
     _Wire->endTransmission();
 }
 
 bool BQ76942::_writeMem(unsigned int cmd, byte* data, byte len) {
+    Serial.println("HERE");
     _subCmdW(cmd, data, len);
+    delay(1000);
+    Serial.println("HERE2");
     if(!_subCmdR(cmd)) {
+        Serial.print("HERE3");
         return false;
     }
+    /*byte _bufcpy[1];
+    memcpy(_bufcpy, _buf, 1);
+    Serial.print("HERE4");
     for(byte i = 0; i < len; i++) {
-        if(*(data + i) != *(_buf + i)) {
+        if(*(data + i) != *(_bufcpy + i)) {
+            Serial.println("RET FALSE");
             return false;
         }
     }
+    Serial.println("RET TRUE");
+    return true;*/
+    Serial.print("BYTE: ");
+    //Serial.print(_buf);
+    //Serial.println(_buf[0]);
     return true;
 }
 
 
 bool BQ76942::ddsgConfig(byte config) {
-    _writeMem(0x9302, (byte*) &config, 1);
+    //9302
+    _writeMem(0x926B, (byte*) &config, 1);
 }
 
 bool BQ76942::dfetoffConfig(byte config) {
@@ -149,13 +190,24 @@ bool BQ76942::_OTPcheck() {
 }
 
 unsigned int BQ76942::devNum() {
-    _subCmdR(0x0002);
-    return *((unsigned int*) &_buf);
+    Serial.print("RETURNS");
+    if(_subCmdR(0x0002)) {
+        Serial.print("T");
+    } else {
+        Serial.print("F");
+    }
+    byte _bufcpy[4];
+    memcpy(_bufcpy, _buf, 4);
+    //Serial.println("HERE3");
+    return *((unsigned int*) _bufcpy);
 }
 
 unsigned int BQ76942::fwVersion() {
     _subCmdR(0x0002);
-    return *(((unsigned int*) &_buf) + 1);
+    byte _bufcpy[4];
+    memcpy(_bufcpy, _buf + 4, 4);
+    Serial.println("HERE3");
+    return *((unsigned int*) _bufcpy);
 }
 
 bool BQ76942::cellConfig(byte numCells) {
