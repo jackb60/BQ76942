@@ -45,82 +45,48 @@ bool BQ76942::_subCmdR(unsigned int cmd) { //See page 13 TRM
             complete = true;
         }
     }
-
     _writeByte(0x61); //4. Read the length of response from 0x61.
     _Wire->requestFrom(_adr, 1);
     _bufLen = _Wire->read() - 4; //0x61 provides the length of the buffer data plus 4
-    Serial.print("BUFLEN");
-    Serial.println(_bufLen);
     _writeByte(0x40); //5. Read buffer starting at 0x40
     _Wire->requestFrom(_adr, _bufLen);
-    Serial.print("AVIAL: ");
-    //Serial.println(_Wire->read());
-    Serial.println(_Wire->available());
-    //_Wire->readBytes(_buf, _bufLen); 
-    //Serial.println("HERE");
+    _Wire->readBytes(_buf, _bufLen);
     //6. Read the checksum at 0x60 and verify it matches the data read
-    /*byte checksum = (byte) cmd + (byte) (cmd >> 8); 
+    byte checksum = (byte) cmd + (byte) (cmd >> 8); 
     for(int i = 0; i < _bufLen; i++) {
         checksum += _buf[i];
     }
     checksum = ~checksum;
     _writeByte(0x60);
     _Wire->requestFrom(_adr, 1);
-    */
-   for(byte i = 0; i < 10; i++) {
-    Serial.print("BYTE ");
-    Serial.print(i);
-    Serial.print(": 0x");
-    Serial.println(_Wire->read(), HEX);
-   }
 
-   //_subCmdR(0x2808);
-   delay(9999999999);
-    return true;//_Wire->read() == checksum;
+    return _Wire->read() == checksum;
 }
 
 void BQ76942::_subCmdW(unsigned int cmd, byte* data, byte len) {
-    Serial.print("FET STATUS: 0x");
-    _dirCmdR(0x7F, 1);
-    Serial.println(_buf[0], HEX);
     byte checksum = (byte) cmd + (byte) (cmd >> 8);
-    Serial.print("CHK1: 0x");
-    Serial.println(checksum, HEX);
     for(int i = 0; i < len; i++) {
         checksum += *(data + i);
     }
     checksum = ~checksum;
-    Serial.print("CHK2: 0x");
-    Serial.println(checksum, HEX);
-    Serial.print("DATA: 0x");
-    Serial.println(*data, HEX);
     _writeSubCmdAdr(cmd);
-    //_Wire->write(*data, len);
-    _Wire->write(*data);
-    for(int i = 0; i < 31; i++) {
+    _Wire->write(data, len);
+    for(int i = 0; i < (32 - len); i++) {
         _Wire->write(0x00);
     }
     _Wire->write(checksum);
     _Wire->write(len + 4);
-    /*_Wire->endTransmission(true);//false); //Write data
-    
-    _Wire->beginTransmission(_adr);
-    _Wire->write(0x60);
-    _Wire->write(checksum);
-    _Wire->write(len + 4);*/
     _Wire->endTransmission();
 }
 
 bool BQ76942::_writeMem(unsigned int cmd, byte* data, byte len) {
-    Serial.println("HERE");
     _subCmdW(cmd, data, len);
-    delay(1000);
-    Serial.println("HERE2");
+    /*Serial.println("HERE2");
     if(!_subCmdR(cmd)) {
         Serial.print("HERE3");
         return false;
     }
-    /*byte _bufcpy[1];
+    byte _bufcpy[1];
     memcpy(_bufcpy, _buf, 1);
     Serial.print("HERE4");
     for(byte i = 0; i < len; i++) {
@@ -130,21 +96,31 @@ bool BQ76942::_writeMem(unsigned int cmd, byte* data, byte len) {
         }
     }
     Serial.println("RET TRUE");
-    return true;*/
+    return true;
     Serial.print("BYTE: ");
     //Serial.print(_buf);
-    //Serial.println(_buf[0]);
+    //Serial.println(_buf[0]);*/
     return true;
 }
 
+bool BQ76942::enableFet() {
+    byte[2] arr = {0x50, 0x00}
+    _writeMem(0x9343, arr, 2);
+}
+
+byte BQ76942::fetStatus() {
+    _dirCmdR(0x7F, 1);
+    return _buf[0];
+}
 
 bool BQ76942::ddsgConfig(byte config) {
-    //9302
-    _writeMem(0x926B, (byte*) &config, 1);
+    _writeMem(0x9302, (byte*) &config, 1);
+    return true;
 }
 
 bool BQ76942::dfetoffConfig(byte config) {
     _writeMem(0x92FB, (byte*) &config, 1);
+    return true;
 }
 
 void BQ76942::daConfig(byte config) { //0x0A (default): userV = mV, userA = cA, use die temp for cell temp protections
@@ -190,16 +166,8 @@ bool BQ76942::_OTPcheck() {
 }
 
 unsigned int BQ76942::devNum() {
-    Serial.print("RETURNS");
-    if(_subCmdR(0x0002)) {
-        Serial.print("T");
-    } else {
-        Serial.print("F");
-    }
-    byte _bufcpy[4];
-    memcpy(_bufcpy, _buf, 4);
-    //Serial.println("HERE3");
-    return *((unsigned int*) _bufcpy);
+    _subCmdR(0x0002);
+    return *((unsigned int*) _buf);
 }
 
 unsigned int BQ76942::fwVersion() {

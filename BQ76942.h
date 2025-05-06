@@ -18,6 +18,9 @@ class BQ76942 {
         bool ddsgConfig(byte config);
         void daConfig(byte config = 0x0A);
         bool cellConfig(byte numCells);
+        byte fetStatus();
+        byte enableFet();
+        
     private:
         TwoWire* _Wire;
         byte _adr;
@@ -29,7 +32,5 @@ class BQ76942 {
         void _writeByte(byte data);
         void _writeSubCmdAdr(unsigned int data, bool send = false);
         bool _OTPcheck();
-        bool _writeMem(unsigned int cmd, byte* data, byte len);
-        
-
+        bool _writeMem(unsigned int cmd, byte* data, byte len);      
 };
