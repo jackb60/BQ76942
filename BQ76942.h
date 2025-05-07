@@ -7,20 +7,20 @@ class BQ76942 {
     public:
         BQ76942(TwoWire* wire = &Wire, byte adr = DEFAULT_ADDR);
         void begin();
-        int cellVoltage(byte cell);
-        int stackVoltage();
+        int16_t cellVoltage(byte cell);
+        int16_t stackVoltage();
         int16_t current();
         float temp();
         void fullAccess();
-        unsigned int devNum();
-        unsigned int fwVersion();
-        bool dfetoffConfig(byte config);
-        bool ddsgConfig(byte config);
-        void daConfig(byte config = 0x0A);
+        bool dfetoffConfig(byte config = 0x86);
+        bool ddsgConfig(byte config = 0x2A);
+        bool daConfig(byte config = 0x0A);
         bool cellConfig(byte numCells);
         byte fetStatus();
         bool enableFet();
-        bool dPro();
+        void enterConfigMode();
+        void exitConfigMode();
+        bool disableProtections();
         
     private:
         TwoWire* _Wire;
@@ -31,7 +31,12 @@ class BQ76942 {
         bool _subCmdR(unsigned int cmd);
         void _subCmdW(unsigned int cmd, byte* data, byte len);
         void _writeByte(byte data);
-        void _writeSubCmdAdr(unsigned int data, bool send = false);
+        void _writeSubCmdAdr(uint16_t data, bool send = false);
         bool _OTPcheck();
-        bool _writeMem(unsigned int cmd, byte* data, byte len);      
+        bool _writeMem(unsigned int cmd, byte* data, byte len);
+        void _subCmdWByte(uint16_t cmd, byte data);
+        void _subCmdWBytes(uint16_t cmd, uint16_t data);
+        bool _writeMemByte(uint16_t adr, byte data);
+        bool _writeMemBytes(uint16_t adr, uint16_t data);
+
 };

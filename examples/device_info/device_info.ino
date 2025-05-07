@@ -12,21 +12,16 @@ void setup() {
   Wire.setSDA(PB7);
   bms.begin();
   delay(1000);
-  //bms.enableFet();
-  bms.ddsgConfig(0x2A);
+  bms.enterConfigMode();
+  bms.disableProtections();
+  bms.ddsgConfig();
+  //bms.dfetoffConfig();
+  bms.enableFet();
+  bms.exitConfigMode();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  //Serial.print("DEVNUM: ");
-  //Serial.println(bms.devNum());
-  //Serial.print("Firmware Version: ");
-  //Serial.println(bms.fwVersion());
-  //bms.fullAccess(); 
-  //bms.dfetoffConfig(0x86);
-  //bms.cellConfig(6);
-  //bms.dPro();
-  //bms.ddsgConfig(0x2A);
   Serial.print("FET STATUS: 0x");
   Serial.println(bms.fetStatus(), HEX);
   delay(2000);
