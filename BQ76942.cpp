@@ -135,6 +135,7 @@ void BQ76942::_subCmdWBytes(uint16_t cmd, uint16_t data) {
 
 bool BQ76942::_writeMemByte(uint16_t adr, byte data) {
     _subCmdWByte(adr, data);
+    _subCmdR(adr);
     //to-do: verify write
     return true;
 }
@@ -142,6 +143,7 @@ bool BQ76942::_writeMemByte(uint16_t adr, byte data) {
 
 bool BQ76942::_writeMemBytes(uint16_t adr, uint16_t data) {
     _subCmdWBytes(adr, data);
+    _subCmdR(adr);
     //to-do: verify write
     return true;
 }
@@ -244,7 +246,7 @@ bool BQ76942::dfetoffConfig(byte config) {
     return true;
 }
 
-bool BQ76942::daConfig(byte config) { //0x0A (default): userV = mV, userA = cA, use die temp for cell temp protections
+bool BQ76942::daConfig(byte config) { //0x0A: userV = mV, userA = cA, use die temp for cell temp protections
     _writeMemByte(0x9303, config);
 
     //to-do: verify write
@@ -284,17 +286,57 @@ void BQ76942::fullAccess() {
     _Wire->endTransmission();
 }
 
-bool BQ76942::_OTPcheck() {
+bool BQ76942::OTPcheck() {
     _subCmdR(0x00A0);
     return _buf[0] & (1 << 7);
+}
+
+void BQ76942::OTPdebug() {
+    _subCmdR(0x00A0);
+    if (_buf[0] & 1) {
+        Serial.println("STACK VOLTAGE TOO HIGH");
+    } else if (_buf[0] & (1 << 1)) {
+        Serial.println("STACK VOLTAGE TOO LOW");
+    } else if (_buf[1] & (1 << 2)) {
+        Serial.println("HIGH TEMP");
+    } else if (_buf[1] & (1 << 3)) {
+        Serial.println("DATA PROGRAMMED TOO MANY TIMES");
+    } else if (_buf[1] & (1 << 4)) {
+        Serial.println("SIGNATURE WRITTEN TOO MANY TIMES");
+    } else if (_buf[1] & (1 << 4)) {
+        Serial.println("NOT IN FULLACCESS AND CONFIG_UPDATE / OTP LOCK SET");
+    }
+}
+
+bool BQ76942::fullAccessCheck() {
+    _dirCmdR(0x12, 2);
+    return (_buf[1] & 0x03) == 0x02;
 }
 
 bool BQ76942::cellConfig(byte numCells) {
     unsigned int config;
     if(numCells == 4) {
-        config = 0x0702;
+        config = 0x0207;
     } else if(numCells == 6) {
-        config = 0x1F02;
+        config = 0x021F;
     }
-    _writeMem(0x9304, (byte*) &config, 2);
+    _writeMemBytes(0x9304, config);
+
+    //to-do: verify write
+    return true;
+}
+
+bool BQ76942::cellUVOnly() {
+    _writeMemByte(0x9261, 0x04);
+
+    //to-do: verify write
+    return true;
+}
+
+bool BQ76942::minCellVoltage(float voltage) {
+    byte setting = (voltage / .0506) + 1; //round up for safety
+    _writeMemByte(0x9275, setting);
+
+    //to-do: verify write
+    return true;
 }

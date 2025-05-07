@@ -21,6 +21,11 @@ class BQ76942 {
         void enterConfigMode();
         void exitConfigMode();
         bool disableProtections();
+        bool cellUVOnly();
+        bool minCellVoltage(float voltage = 3);
+        bool OTPcheck();
+        void OTPdebug();
+        bool fullAccessCheck();
         
     private:
         TwoWire* _Wire;
@@ -32,7 +37,6 @@ class BQ76942 {
         void _subCmdW(unsigned int cmd, byte* data, byte len);
         void _writeByte(byte data);
         void _writeSubCmdAdr(uint16_t data, bool send = false);
-        bool _OTPcheck();
         bool _writeMem(unsigned int cmd, byte* data, byte len);
         void _subCmdWByte(uint16_t cmd, byte data);
         void _subCmdWBytes(uint16_t cmd, uint16_t data);

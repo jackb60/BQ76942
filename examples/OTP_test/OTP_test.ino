@@ -11,21 +11,25 @@ void setup() {
   Wire.setSCL(PB6);
   Wire.setSDA(PB7);
   bms.begin();
+  delay(2000);
+  Serial.print("OTP CHECKS");
+  bms.fullAccess();
   delay(100);
+  if(!bms.fullAccessCheck()) {
+    Serial.println("FULL ACCESS FAILED");
+  } else {
+    Serial.println("FULL ACCESS SUCCESS");
+  }
   bms.enterConfigMode();
-  bms.cellConfig(6);
-  bms.minCellVoltage();
-  bms.cellUVOnly();
-  //bms.disableProtections();
-  bms.ddsgConfig();
-  //bms.dfetoffConfig();
-  bms.enableFet();
-  bms.exitConfigMode();
+  if(!bms.OTPcheck()) {
+    bms.OTPdebug();
+  } else {
+    Serial.println("CONDITIONS GOOD FOR OTP");
+  }
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.print("FET STATUS: 0x");
-  Serial.println(bms.fetStatus(), HEX);
-  delay(2000);
+  delay(1);
 }
