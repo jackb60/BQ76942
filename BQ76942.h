@@ -9,7 +9,7 @@ class BQ76942 {
         void begin();
         int cellVoltage(byte cell);
         int stackVoltage();
-        int current();
+        int16_t current();
         float temp();
         void fullAccess();
         unsigned int devNum();
@@ -19,7 +19,8 @@ class BQ76942 {
         void daConfig(byte config = 0x0A);
         bool cellConfig(byte numCells);
         byte fetStatus();
-        byte enableFet();
+        bool enableFet();
+        bool dPro();
         
     private:
         TwoWire* _Wire;

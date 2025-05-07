@@ -103,9 +103,38 @@ bool BQ76942::_writeMem(unsigned int cmd, byte* data, byte len) {
     return true;
 }
 
+bool BQ76942::dPro() {
+    _writeSubCmdAdr(0x0090, true);
+    byte arr[1] = {0x00};
+    _writeMem(0x9261, arr, 1);
+    _writeSubCmdAdr(0x0092, true);
+    /*if(_subCmdR(0x9261)) {
+        Serial.println("SC SUCCESS");
+    }
+    Serial.print("BYTE 1: 0x");
+    Serial.println(_buf[0]);
+    Serial.print("BYTE 2: 0x");
+    Serial.println(_buf[31]);*/
+    return true;
+}
+
 bool BQ76942::enableFet() {
-    byte[2] arr = {0x50, 0x00}
+
+    
+    //_writeSubCmdAdr(0x0020, true);
+    _writeSubCmdAdr(0x0090, true);
+    delay(1000);
+    byte arr[2] = {0x10, 0x00};
     _writeMem(0x9343, arr, 2);
+    if(_subCmdR(0x9343)) {
+        Serial.println("SC SUCCESS");
+    }
+    Serial.print("BYTE 1: 0x");
+    Serial.println(_buf[0]);
+    Serial.print("BYTE 2: 0x");
+    Serial.println(_buf[1]);
+    _writeSubCmdAdr(0x0092, true);
+    return true;
 }
 
 byte BQ76942::fetStatus() {
@@ -114,12 +143,28 @@ byte BQ76942::fetStatus() {
 }
 
 bool BQ76942::ddsgConfig(byte config) {
+    _writeSubCmdAdr(0x0090, true);
+    delay(1000);
+    _dirCmdR(0x12,2);
+    Serial.print("BYTE 1: 0x");
+    Serial.println(_buf[0], HEX);
+    Serial.print("BYTE 2: 0x");
+    Serial.println(_buf[1], HEX);
     _writeMem(0x9302, (byte*) &config, 1);
+    if(_subCmdR(0x9302)) {
+        Serial.println("SC SUCCESS");
+    }
+    Serial.print("BYTE 1: 0x");
+    Serial.println(_buf[0], HEX);
+    _writeSubCmdAdr(0x0092, true);
     return true;
 }
 
 bool BQ76942::dfetoffConfig(byte config) {
+    _writeSubCmdAdr(0x0090, true);
+    delay(1000);
     _writeMem(0x92FB, (byte*) &config, 1);
+    _writeSubCmdAdr(0x0092, true);
     return true;
 }
 
@@ -137,7 +182,7 @@ int BQ76942::stackVoltage() {
     return (_buf[1] << 8) + _buf[0];
 }
 
-int BQ76942::current() {
+int16_t BQ76942::current() {
     _dirCmdR(0x3A, 2);
     return (_buf[1] << 8) + _buf[0];
 }
