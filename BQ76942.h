@@ -26,7 +26,8 @@ class BQ76942 {
         bool OTPcheck();
         void OTPdebug();
         bool fullAccessCheck();
-        
+        bool writeOTP();
+
     private:
         TwoWire* _Wire;
         byte _adr;

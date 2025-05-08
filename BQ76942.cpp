@@ -310,7 +310,13 @@ void BQ76942::OTPdebug() {
 
 bool BQ76942::fullAccessCheck() {
     _dirCmdR(0x12, 2);
-    return (_buf[1] & 0x03) == 0x02;
+    return (_buf[1] & 0x03) == 0x01;
+}
+
+bool BQ76942::writeOTP() {
+    _subCmdR(0x00A1);
+    delay(1000);
+    return _buf[0] == 0x80;
 }
 
 bool BQ76942::cellConfig(byte numCells) {
